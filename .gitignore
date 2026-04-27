@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+
+config/config.yaml
+
+*.db
+*.sqlite
+*.sqlite3
+
+.vscode/
+.idea/
+
+bin/
+dist/
+tmp/
+*.log

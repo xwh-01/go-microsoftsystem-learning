@@ -1,0 +1,11 @@
+go 1.26.0
+
+use (
+	./api-gateway
+	./order-service
+	./product-service
+	./proto
+	./user-service
+)
+
+replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20230526161137-0005af68ea54

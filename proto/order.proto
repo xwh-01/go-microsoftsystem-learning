@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option go_package = "./;pb";
+
+service OrderService {
+  // Create an order and trigger asynchronous stock deduction.
+  rpc CreateOrder (CreateOrderRequest) returns (CreateOrderResponse);
+  // Query the latest order status.
+  rpc GetOrder (GetOrderRequest) returns (GetOrderResponse);
+}
+
+message CreateOrderRequest {
+  int32 user_id = 1;
+  int32 product_id = 2;
+}
+
+message CreateOrderResponse {
+  int32 code = 1;
+  string message = 2;
+  string order_id = 3;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetOrderResponse {
+  int32 code = 1;
+  string message = 2;
+  string order_id = 3;
+  int32 user_id = 4;
+  int32 product_id = 5;
+  string status = 6;
+  string status_message = 7;
+}
