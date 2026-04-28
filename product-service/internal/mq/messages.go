@@ -1,11 +1,6 @@
 package mq
 
-import (
-	"context"
-	"encoding/json"
-
-	amqp "github.com/rabbitmq/amqp091-go"
-)
+import amqp "github.com/rabbitmq/amqp091-go"
 
 const (
 	StockQueue       = "stock_queue"
@@ -34,23 +29,4 @@ func DeclareQueues(ch *amqp.Channel) error {
 		return err
 	}
 	return nil
-}
-
-func PublishStockResult(ctx context.Context, ch *amqp.Channel, msg StockDeductionMessage, success bool, reason string) error {
-	result := StockResultMessage{
-		OrderID:   msg.OrderID,
-		UserID:    msg.UserID,
-		ProductID: msg.ProductID,
-		Success:   success,
-		Reason:    reason,
-	}
-	body, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-
-	return ch.PublishWithContext(ctx, "", StockResultQueue, false, false, amqp.Publishing{
-		ContentType: "application/json",
-		Body:        body,
-	})
 }
