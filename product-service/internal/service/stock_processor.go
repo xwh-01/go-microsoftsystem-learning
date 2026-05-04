@@ -6,9 +6,6 @@ import (
 	"time"
 
 	"product-service/internal/stock"
-
-	"github.com/go-redsync/redsync/v4"
-	"github.com/redis/go-redis/v9"
 )
 
 type StockDeduction struct {
@@ -21,41 +18,46 @@ type StockResultPublisher interface {
 	PublishStockResult(ctx context.Context, msg StockDeduction, success bool, reason string) error
 }
 
+type stockCache interface {
+	IsOrderProcessed(ctx context.Context, key string) (bool, error)
+	DeductCachedStock(ctx context.Context, key string, quantity int32) (int, error)
+	MarkOrderProcessed(ctx context.Context, key string, ttl time.Duration) error
+	DeleteProductCache(ctx context.Context, productID int32) error
+	SetStock(ctx context.Context, key string, value int32, ttl time.Duration) error
+}
+
 type StockProcessor struct {
 	repo      productRepository
-	rdb       *redis.Client
-	locks     *redsync.Redsync
+	cache     stockCache
 	publisher StockResultPublisher
 }
 
 func NewStockProcessor(
 	repo productRepository,
-	rdb *redis.Client,
-	locks *redsync.Redsync,
+	cache stockCache,
 	publisher StockResultPublisher,
 ) *StockProcessor {
 	return &StockProcessor{
 		repo:      repo,
-		rdb:       rdb,
-		locks:     locks,
+		cache:     cache,
 		publisher: publisher,
 	}
 }
 
 func (p *StockProcessor) Process(ctx context.Context, msg StockDeduction) (bool, error) {
 	idempotentKey := stock.IdempotencyKey(msg.OrderID)
-	processed, err := p.rdb.Exists(ctx, idempotentKey).Result()
+	processed, err := p.cache.IsOrderProcessed(ctx, idempotentKey)
 	if err != nil {
 		log.Printf("idempotency check failed: %v", err)
 		return false, err
 	}
-	if processed > 0 {
+	if processed {
 		log.Printf("duplicate order ignored: %s", msg.OrderID)
 		return true, nil
 	}
 
 	cacheKey := stock.StockCacheKey(msg.ProductID)
-	res, err := p.rdb.Eval(ctx, stock.LuaDeductStock, []string{cacheKey}, 1).Int()
+	res, err := p.cache.DeductCachedStock(ctx, cacheKey, 1)
 	if err != nil {
 		log.Printf("decrement stock in redis failed: %v", err)
 		return false, err
@@ -76,15 +78,6 @@ func (p *StockProcessor) Process(ctx context.Context, msg StockDeduction) (bool,
 }
 
 func (p *StockProcessor) handleRedisStockDeducted(ctx context.Context, msg StockDeduction, idempotentKey string) (bool, error) {
-	mutex := p.locks.NewMutex(stock.ProductLockKey(msg.ProductID))
-	if err := mutex.Lock(); err != nil {
-		log.Printf("acquire stock lock failed: %v", err)
-		return false, err
-	}
-	defer func() {
-		_, _ = mutex.Unlock()
-	}()
-
 	updated, err := p.repo.DeductStock(ctx, msg.ProductID, 1)
 	if err != nil {
 		log.Printf("update stock in mysql failed: %v", err)
@@ -97,17 +90,17 @@ func (p *StockProcessor) handleRedisStockDeducted(ctx context.Context, msg Stock
 			log.Printf("publish stock result failed: %v", err)
 			return false, err
 		}
-		_ = p.rdb.Set(ctx, idempotentKey, "1", 24*time.Hour).Err()
+		_ = p.cache.MarkOrderProcessed(ctx, idempotentKey, 24*time.Hour)
 		return true, nil
 	}
 
-	_ = p.rdb.Del(ctx, stock.ProductCacheKey(msg.ProductID)).Err()
+	_ = p.cache.DeleteProductCache(ctx, msg.ProductID)
 	if err := p.publisher.PublishStockResult(ctx, msg, true, stock.ResultReasonDeducted); err != nil {
 		log.Printf("publish stock result failed: %v", err)
 		return false, err
 	}
 
-	_ = p.rdb.Set(ctx, idempotentKey, "1", 24*time.Hour).Err()
+	_ = p.cache.MarkOrderProcessed(ctx, idempotentKey, 24*time.Hour)
 	log.Printf("stock decremented for order %s", msg.OrderID)
 	return true, nil
 }
@@ -118,13 +111,13 @@ func (p *StockProcessor) handleInsufficientStock(ctx context.Context, msg StockD
 		log.Printf("publish stock result failed: %v", err)
 		return false, err
 	}
-	_ = p.rdb.Set(ctx, idempotentKey, "1", 24*time.Hour).Err()
+	_ = p.cache.MarkOrderProcessed(ctx, idempotentKey, 24*time.Hour)
 	return true, nil
 }
 
 func (p *StockProcessor) reloadStockCache(ctx context.Context, productID int32, cacheKey string) {
 	product, err := p.repo.FindByID(ctx, productID)
 	if err == nil {
-		_ = p.rdb.Set(ctx, cacheKey, product.Stock, stock.StockCacheTTL).Err()
+		_ = p.cache.SetStock(ctx, cacheKey, product.Stock, stock.StockCacheTTL)
 	}
 }

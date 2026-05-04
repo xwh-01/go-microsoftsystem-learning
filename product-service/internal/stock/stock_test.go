@@ -14,8 +14,4 @@ func TestStockKeys(t *testing.T) {
 	if got := IdempotencyKey("ORD-1"); got != "processed_order:ORD-1" {
 		t.Fatalf("unexpected idempotency key: %s", got)
 	}
-
-	if got := ProductLockKey(1); got != "lock:product:1" {
-		t.Fatalf("unexpected lock key: %s", got)
-	}
 }

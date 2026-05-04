@@ -7,14 +7,6 @@ services:
     ports:
       - "6379:6379"
 
-  consul:
-    image: hashicorp/consul:latest
-    container_name: micro-consul
-    ports:
-      - "8500:8500"
-      - "8600:8600/udp"
-    command: "agent -dev -client=0.0.0.0"
-
   rabbitmq:
     image: rabbitmq:management-alpine
     container_name: micro-rabbitmq

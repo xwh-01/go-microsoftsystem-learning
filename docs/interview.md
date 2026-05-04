@@ -1,156 +1,31 @@
-# Interview Guide
+# 面试讲解提纲
 
-## One Sentence
+## 30 秒版本
 
-This is a small Go microservice order system focused on asynchronous stock deduction, order state transitions, message idempotency, and eventual consistency.
+这是一个 Go 订单库存异步处理系统。网关用 Gin 对外提供 HTTP 接口，内部通过 gRPC 调用 user、product、order 服务。用户下单后，订单服务先创建 `pending_stock` 状态的订单，再通过 RabbitMQ 发送库存扣减消息。商品服务消费消息后，用 Redis 幂等 key 防止重复处理，用 Redis Lua 对库存缓存做原子预扣，再用 MySQL 条件更新扣减真实库存，最后把库存结果回写给订单服务，订单更新为 `confirmed` 或 `failed`。
 
-## How To Explain The Project
-
-Start from the business flow, not from the technology stack:
+## 核心链路
 
 ```text
-After login, a user creates an order through the gateway.
-The order service saves the order as pending_stock and sends a stock deduction message.
-The product service consumes the message, deducts stock, and sends the result back.
-The order service consumes the result and changes the order to confirmed or failed.
-The user can query the final order status.
+登录拿 JWT
+  -> 查询商品
+  -> 创建 pending_stock 订单
+  -> RabbitMQ stock_queue
+  -> 商品服务异步扣库存
+  -> RabbitMQ stock_result_queue
+  -> 订单状态 confirmed / failed
 ```
 
-## Why The Order Starts As pending_stock
+## 两个重点
 
-Creating an order only means the system has accepted the request. Stock deduction is asynchronous, so the system cannot immediately say the order is finally confirmed.
+### 1. 订单和库存解耦
 
-That is why the first status is:
+订单服务不直接调用商品服务扣库存，只发布库存扣减消息。商品服务独立消费消息并处理库存，处理完成后发布库存结果。这样订单服务主要关注订单生命周期，商品服务主要关注商品和库存处理。
 
-```text
-pending_stock
-```
+### 2. 库存处理可控
 
-Then it becomes:
+商品服务处理库存消息时先检查 `processed_order:<order_id>`，避免 RabbitMQ 重复投递导致重复扣减。然后使用 Redis Lua 对 `product_stock:<product_id>` 做原子预扣，预扣成功后再通过 MySQL 条件更新作为库存扣减兜底。
 
-```text
-confirmed
-```
+## 可以主动说明的取舍
 
-or:
-
-```text
-failed
-```
-
-## Why RabbitMQ Is Used
-
-RabbitMQ decouples order creation from stock deduction.
-
-Without MQ:
-
-```text
-order-service -> calls product-service synchronously -> waits for stock result
-```
-
-With MQ:
-
-```text
-order-service -> writes order -> publishes message -> returns order_id
-product-service -> consumes message -> deducts stock -> publishes result
-order-service -> consumes result -> updates status
-```
-
-This makes the order API faster and keeps service responsibilities clearer.
-
-## How Product Query Avoids Cache Penetration
-
-The product query path uses both a Bloom filter and null cache.
-
-```text
-1. Bloom filter checks whether a product ID might exist.
-2. Redis product cache checks normal cached data.
-3. Redis null cache blocks repeated queries for missing products.
-4. MySQL is only queried when the request passes the first three checks.
-```
-
-This keeps repeated invalid product requests away from MySQL and makes the cache layer more reliable.
-
-## How The System Avoids Overselling
-
-The product service uses Redis Lua to atomically check and deduct cached stock:
-
-```text
-if stock >= 1:
-  stock = stock - 1
-else:
-  reject
-```
-
-Then MySQL is updated with a condition:
-
-```sql
-WHERE id = ? AND stock > 0
-```
-
-Redis handles fast atomic pre-deduction. MySQL is the persistent safety layer.
-
-In the code, Redis Lua returns three possible values:
-
-```text
-1  -> cached stock was deducted
-0  -> insufficient stock
--1 -> stock cache missing
-```
-
-The product service handles these branches separately:
-
-```text
-1  -> update MySQL and publish success
-0  -> publish failed result
--1 -> reload stock cache and requeue the message
-```
-
-This makes the stock flow easier to explain than simply saying "Redis deducts stock".
-
-## How Duplicate Messages Are Handled
-
-RabbitMQ may deliver the same message more than once. The product service uses Redis idempotency keys:
-
-```text
-processed_order:<order_id>
-```
-
-If this key already exists, the product service ignores the duplicate message and does not deduct stock again.
-
-The key is written after the stock result is published. This avoids marking a message as processed before the order service has a chance to receive the final result.
-
-## What Consul Does
-
-The internal services register themselves with Consul. The gateway reads service addresses from Consul instead of hardcoding all gRPC addresses.
-
-This is a basic service discovery pattern.
-
-## What Sentinel Does
-
-Sentinel is used at the gateway to limit the create-order API. It protects downstream services from too many order requests in a short time.
-
-This is a supporting feature, not the core project story.
-
-## Project Limitations
-
-Be honest about what is not included:
-
-- The project has no payment flow.
-- The order state machine is intentionally small.
-- The order service is lightly layered, and the product service has extracted stock and MQ concepts but is not fully layered yet.
-- There are only minimal unit tests.
-- Services are not fully containerized yet.
-
-This is acceptable because the project goal is to clearly show one complete microservice business flow.
-
-## Strong Summary
-
-Use this summary in interviews:
-
-```text
-The main design point is that order creation and stock deduction are separated.
-The order service owns the order lifecycle, the product service owns stock, and RabbitMQ connects them asynchronously.
-The order status makes the asynchronous result visible to users.
-Redis Lua and MySQL conditional updates protect stock deduction, and Redis idempotency keys prevent duplicate message processing.
-```
+这个项目刻意没有继续堆服务治理组件，而是聚焦订单和库存这条主链路。当前重点是把 HTTP 接入、gRPC 调用、Redis 缓存、RabbitMQ 异步消息、JWT 鉴权和订单状态流转做清楚。

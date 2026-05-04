@@ -9,7 +9,6 @@ import (
 
 	pb "micro-proto"
 
-	sentinel "github.com/alibaba/sentinel-golang/api"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -134,13 +133,6 @@ func NewRouter(clients Clients, authMiddleware gin.HandlerFunc, generateToken fu
 				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 				return
 			}
-
-			entry, blockErr := sentinel.Entry("create_order")
-			if blockErr != nil {
-				c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many requests"})
-				return
-			}
-			defer entry.Exit()
 
 			userID, ok := c.Get("userID")
 			if !ok {

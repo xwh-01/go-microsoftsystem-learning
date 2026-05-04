@@ -50,7 +50,3 @@ func StockCacheKey(productID int32) string {
 func IdempotencyKey(orderID string) string {
 	return fmt.Sprintf("processed_order:%s", orderID)
 }
-
-func ProductLockKey(productID int32) string {
-	return fmt.Sprintf("lock:product:%d", productID)
-}

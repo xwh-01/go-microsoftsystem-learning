@@ -5,16 +5,12 @@ import (
 	"errors"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 
 	pb "micro-proto"
 	"order-service/internal/mq"
 	"order-service/internal/repository"
 	"order-service/internal/service"
 
-	"github.com/hashicorp/consul/api"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -109,34 +105,8 @@ func main() {
 	grpcServer := grpc.NewServer()
 	pb.RegisterOrderServiceServer(grpcServer, &grpcOrderHandler{orderService: orderService})
 
-	consulClient, err := api.NewClient(&api.Config{Address: viper.GetString("common.consul_addr")})
-	if err != nil {
-		log.Fatalf("create consul client failed: %v", err)
-	}
-	registration := &api.AgentServiceRegistration{
-		ID:      viper.GetString("order_service.node_id"),
-		Name:    viper.GetString("order_service.name"),
-		Port:    50053,
-		Address: "127.0.0.1",
-	}
-	if err := consulClient.Agent().ServiceRegister(registration); err != nil {
-		log.Fatalf("register consul service failed: %v", err)
-	}
-
 	log.Printf("order service started on %s", port)
-	go func() {
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("serve failed: %v", err)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	if err := consulClient.Agent().ServiceDeregister(viper.GetString("order_service.node_id")); err != nil {
-		log.Printf("deregister consul service failed: %v", err)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("serve failed: %v", err)
 	}
-	grpcServer.GracefulStop()
-	log.Println("order service stopped")
 }

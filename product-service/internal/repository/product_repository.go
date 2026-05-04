@@ -46,14 +46,6 @@ func (r *ProductRepository) FindByID(ctx context.Context, productID int32) (*mod
 	return &product, nil
 }
 
-func (r *ProductRepository) ListIDs(ctx context.Context) ([]int32, error) {
-	var ids []int32
-	if err := r.db.WithContext(ctx).Model(&model.Product{}).Pluck("id", &ids).Error; err != nil {
-		return nil, err
-	}
-	return ids, nil
-}
-
 func (r *ProductRepository) DeductStock(ctx context.Context, productID int32, quantity int32) (bool, error) {
 	tx := r.db.WithContext(ctx).
 		Model(&model.Product{}).

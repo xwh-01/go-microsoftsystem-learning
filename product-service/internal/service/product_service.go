@@ -18,46 +18,22 @@ import (
 type productRepository interface {
 	Create(ctx context.Context, product *model.Product) error
 	FindByID(ctx context.Context, productID int32) (*model.Product, error)
-	ListIDs(ctx context.Context) ([]int32, error)
 	DeductStock(ctx context.Context, productID int32, quantity int32) (bool, error)
 }
 
 type ProductService struct {
-	repo  productRepository
-	rdb   *redis.Client
-	bloom *stock.BloomFilter
+	repo productRepository
+	rdb  *redis.Client
 }
 
-func NewProductService(repo productRepository, rdb *redis.Client, bloom *stock.BloomFilter) *ProductService {
+func NewProductService(repo productRepository, rdb *redis.Client) *ProductService {
 	return &ProductService{
-		repo:  repo,
-		rdb:   rdb,
-		bloom: bloom,
+		repo: repo,
+		rdb:  rdb,
 	}
-}
-
-func LoadProductBloomFilter(ctx context.Context, repo productRepository) (*stock.BloomFilter, error) {
-	ids, err := repo.ListIDs(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	bitSize := uint64(2048)
-	if len(ids) > 0 {
-		bitSize = uint64(len(ids) * 32)
-	}
-	filter := stock.NewBloomFilter(bitSize, 3)
-	for _, id := range ids {
-		filter.AddInt32(id)
-	}
-	return filter, nil
 }
 
 func (s *ProductService) GetProduct(ctx context.Context, productID int32) (*pb.GetProductResponse, error) {
-	if !s.bloom.MightContainInt32(productID) {
-		return nil, ErrProductNotFound
-	}
-
 	cacheKey := stock.ProductCacheKey(productID)
 	cached, ok, notFound := s.readProductCache(ctx, cacheKey)
 	if notFound {
@@ -84,7 +60,6 @@ func (s *ProductService) GetProduct(ctx context.Context, productID int32) (*pb.G
 	}
 	s.writeProductCache(ctx, cacheKey, res)
 	_ = s.rdb.Set(ctx, stock.StockCacheKey(productID), product.Stock, stock.StockCacheTTL).Err()
-	s.bloom.AddInt32(productID)
 
 	return res, nil
 }

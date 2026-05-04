@@ -4,9 +4,6 @@ import (
 	"context"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 
 	pb "micro-proto"
 	productgrpc "product-service/internal/grpc"
@@ -15,9 +12,6 @@ import (
 	"product-service/internal/repository"
 	"product-service/internal/service"
 
-	"github.com/go-redsync/redsync/v4"
-	"github.com/go-redsync/redsync/v4/redis/goredis/v9"
-	"github.com/hashicorp/consul/api"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
@@ -39,15 +33,9 @@ func main() {
 	defer mqConn.Close()
 	defer mqChannel.Close()
 
-	bloomFilter, err := service.LoadProductBloomFilter(ctx, productRepo)
-	if err != nil {
-		log.Fatalf("load product bloom filter failed: %v", err)
-	}
-
 	stockProcessor := service.NewStockProcessor(
 		productRepo,
-		rdb,
-		redsync.New(goredis.NewPool(rdb)),
+		service.NewRedisStockCache(rdb),
 		productmq.NewStockResultPublisher(mqChannel),
 	)
 	if err := productmq.StartStockConsumer(mqChannel, stockProcessor); err != nil {
@@ -61,27 +49,13 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
-	productService := service.NewProductService(productRepo, rdb, bloomFilter)
+	productService := service.NewProductService(productRepo, rdb)
 	pb.RegisterProductServiceServer(grpcServer, productgrpc.NewHandler(productService))
 
-	consulClient := registerConsul()
-
 	log.Printf("product service started on %s", port)
-	go func() {
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("serve failed: %v", err)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	if err := consulClient.Agent().ServiceDeregister(viper.GetString("product_service.node_id")); err != nil {
-		log.Printf("deregister consul service failed: %v", err)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("serve failed: %v", err)
 	}
-	grpcServer.GracefulStop()
-	log.Println("product service stopped")
 }
 
 func initProductRepository(ctx context.Context) *repository.ProductRepository {
@@ -140,22 +114,4 @@ func initRabbitMQ() (*amqp.Connection, *amqp.Channel) {
 		log.Fatalf("declare stock queues failed: %v", err)
 	}
 	return conn, ch
-}
-
-func registerConsul() *api.Client {
-	consulClient, err := api.NewClient(&api.Config{Address: viper.GetString("common.consul_addr")})
-	if err != nil {
-		log.Fatalf("create consul client failed: %v", err)
-	}
-
-	registration := &api.AgentServiceRegistration{
-		ID:      viper.GetString("product_service.node_id"),
-		Name:    viper.GetString("product_service.name"),
-		Port:    50052,
-		Address: "127.0.0.1",
-	}
-	if err := consulClient.Agent().ServiceRegister(registration); err != nil {
-		log.Fatalf("register consul service failed: %v", err)
-	}
-	return consulClient
 }

@@ -1,24 +1,20 @@
 # Copy this file to config/config.yaml for local development.
 # Replace every change_me value before running services.
 common:
-  consul_addr: "localhost:8500"
   rabbitmq_addr: "amqp://change_me:change_me@localhost:5672/"
   redis_addr: "localhost:6379"
 
 user_service:
   port: ":50051"
-  name: "user-service"
-  node_id: "user-node-1"
+  target: "127.0.0.1:50051"
 
 product_service:
   port: ":50052"
-  name: "product-service"
-  node_id: "product-node-1"
+  target: "127.0.0.1:50052"
 
 order_service:
   port: ":50053"
-  name: "order-service"
-  node_id: "order-node-1"
+  target: "127.0.0.1:50053"
 
 api_gateway:
   port: ":8080"
