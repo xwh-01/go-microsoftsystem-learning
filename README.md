@@ -146,5 +146,3 @@ go test ./api-gateway/... ./user-service/... ./product-service/... ./order-servi
 ```powershell
 go test ./product-service/internal/service -v
 ```
-
-更多验收说明见 [docs/verification.md](docs/verification.md)。
