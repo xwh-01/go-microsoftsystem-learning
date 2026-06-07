@@ -10,10 +10,12 @@ user_service:
 
 product_service:
   port: ":50052"
+  metrics_port: ":9102"
   target: "127.0.0.1:50052"
 
 order_service:
   port: ":50053"
+  metrics_port: ":9103"
   target: "127.0.0.1:50053"
 
 api_gateway:

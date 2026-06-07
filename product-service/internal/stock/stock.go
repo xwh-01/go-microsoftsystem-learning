@@ -12,9 +12,16 @@ const (
 )
 
 const (
+	ResultReasonStarted         = "stock deduction started"
 	ResultReasonDeducted        = "stock deducted"
+	ResultReasonRedisDeducted   = "redis stock deducted"
+	ResultReasonMySQLDeducted   = "mysql stock deducted"
 	ResultReasonInsufficient    = "insufficient stock"
 	ResultReasonDBUpdateSkipped = "stock update skipped"
+	ResultReasonCacheMissing    = "stock cache missing"
+	ResultReasonRedisFailed     = "redis stock deduction failed"
+	ResultReasonMySQLFailed     = "mysql stock deduction failed"
+	ResultReasonRetryExhausted  = "stock deduction retry exhausted"
 )
 
 const (

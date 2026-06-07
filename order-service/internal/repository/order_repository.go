@@ -47,3 +47,17 @@ func (r *OrderRepository) UpdateStatus(ctx context.Context, orderID string, stat
 			"message": message,
 		}).Error
 }
+
+func (r *OrderRepository) UpdateStatusFrom(ctx context.Context, orderID string, expectedStatus string, targetStatus string, message string) (bool, error) {
+	tx := r.db.WithContext(ctx).
+		Model(&model.Order{}).
+		Where("order_id = ? AND status = ?", orderID, expectedStatus).
+		Updates(map[string]any{
+			"status":  targetStatus,
+			"message": message,
+		})
+	if tx.Error != nil {
+		return false, tx.Error
+	}
+	return tx.RowsAffected > 0, nil
+}

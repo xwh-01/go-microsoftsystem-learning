@@ -30,3 +30,23 @@ func (h *Handler) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*p
 	}
 	return product, nil
 }
+
+func (h *Handler) GetStockDeductionLog(ctx context.Context, req *pb.GetStockDeductionLogRequest) (*pb.GetStockDeductionLogResponse, error) {
+	logEntry, err := h.productService.GetStockDeductionLog(ctx, req.OrderId)
+	if err != nil {
+		if errors.Is(err, service.ErrStockDeductionLogNotFound) {
+			return &pb.GetStockDeductionLogResponse{Code: 404, Message: "stock deduction log not found"}, nil
+		}
+		return &pb.GetStockDeductionLogResponse{Code: 500, Message: "query stock deduction log failed"}, nil
+	}
+
+	return &pb.GetStockDeductionLogResponse{
+		Code:      200,
+		Message:   "ok",
+		OrderId:   logEntry.OrderID,
+		ProductId: logEntry.ProductID,
+		Quantity:  logEntry.Quantity,
+		Status:    logEntry.Status,
+		Reason:    logEntry.Reason,
+	}, nil
+}

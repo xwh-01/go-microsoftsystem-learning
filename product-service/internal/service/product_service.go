@@ -19,6 +19,7 @@ type productRepository interface {
 	Create(ctx context.Context, product *model.Product) error
 	FindByID(ctx context.Context, productID int32) (*model.Product, error)
 	DeductStock(ctx context.Context, productID int32, quantity int32) (bool, error)
+	FindStockDeductionLog(ctx context.Context, orderID string) (*model.StockDeductionLog, error)
 }
 
 type ProductService struct {
@@ -64,6 +65,17 @@ func (s *ProductService) GetProduct(ctx context.Context, productID int32) (*pb.G
 	return res, nil
 }
 
+func (s *ProductService) GetStockDeductionLog(ctx context.Context, orderID string) (*model.StockDeductionLog, error) {
+	logEntry, err := s.repo.FindStockDeductionLog(ctx, orderID)
+	if err != nil {
+		if errors.Is(err, repository.ErrStockDeductionLogNotFound) {
+			return nil, ErrStockDeductionLogNotFound
+		}
+		return nil, fmt.Errorf("query stock deduction log failed: %w", err)
+	}
+	return logEntry, nil
+}
+
 func (s *ProductService) readProductCache(ctx context.Context, cacheKey string) (*pb.GetProductResponse, bool, bool) {
 	val, err := s.rdb.Get(ctx, cacheKey).Result()
 	if err == redis.Nil {
@@ -94,3 +106,4 @@ func (s *ProductService) writeProductCache(ctx context.Context, cacheKey string,
 }
 
 var ErrProductNotFound = errors.New("product not found")
+var ErrStockDeductionLogNotFound = errors.New("stock deduction log not found")

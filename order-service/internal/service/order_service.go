@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
+	"order-service/internal/metrics"
 	"order-service/internal/model"
 	"order-service/internal/repository"
 )
@@ -37,6 +39,7 @@ type orderRepository interface {
 	Create(ctx context.Context, order *model.Order) error
 	FindByOrderID(ctx context.Context, orderID string) (*model.Order, error)
 	UpdateStatus(ctx context.Context, orderID string, status string, message string) error
+	UpdateStatusFrom(ctx context.Context, orderID string, expectedStatus string, targetStatus string, message string) (bool, error)
 }
 
 func NewOrderService(repo orderRepository, publisher StockPublisher) *OrderService {
@@ -58,6 +61,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID int32, productID 
 	if err := s.repo.Create(ctx, order); err != nil {
 		return nil, fmt.Errorf("create order record failed: %w", err)
 	}
+	metrics.OrdersCreatedTotal.Inc()
 
 	msg := StockDeduction{
 		OrderID:   order.OrderID,
@@ -66,6 +70,8 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID int32, productID 
 	}
 	if err := s.publisher.PublishStockDeduction(ctx, msg); err != nil {
 		_ = s.repo.UpdateStatus(ctx, order.OrderID, model.OrderStatusFailed, "publish stock message failed")
+		metrics.OrdersFailedTotal.Inc()
+		metrics.OrderStatusUpdateTotal.WithLabelValues(model.OrderStatusPendingStock, model.OrderStatusFailed, "applied").Inc()
 		return nil, fmt.Errorf("publish stock message failed: %w", err)
 	}
 
@@ -86,9 +92,38 @@ func (s *OrderService) GetOrder(ctx context.Context, orderID string) (*model.Ord
 func (s *OrderService) ApplyStockResult(ctx context.Context, result StockResult) error {
 	status := model.StatusFromStockResult(result.Success)
 	message := model.MessageFromStockResult(result.Success, result.Reason)
-	if err := s.repo.UpdateStatus(ctx, result.OrderID, status, message); err != nil {
+	updated, err := s.repo.UpdateStatusFrom(ctx, result.OrderID, model.OrderStatusPendingStock, status, message)
+	if err != nil {
+		metrics.OrderStatusUpdateTotal.WithLabelValues(model.OrderStatusPendingStock, status, "error").Inc()
 		return fmt.Errorf("update order status failed: %w", err)
 	}
+	if !updated {
+		metrics.OrderStatusUpdateTotal.WithLabelValues(model.OrderStatusPendingStock, status, "skipped").Inc()
+		log.Printf(
+			"order status update skipped: order_id=%s expected_status=%s target_status=%s reason=%s",
+			result.OrderID,
+			model.OrderStatusPendingStock,
+			status,
+			"duplicate_message_or_illegal_state_transition",
+		)
+		return nil
+	}
+
+	metrics.OrderStatusUpdateTotal.WithLabelValues(model.OrderStatusPendingStock, status, "applied").Inc()
+	if status == model.OrderStatusConfirmed {
+		metrics.OrdersConfirmedTotal.Inc()
+	}
+	if status == model.OrderStatusFailed {
+		metrics.OrdersFailedTotal.Inc()
+	}
+
+	log.Printf(
+		"order status update applied: order_id=%s expected_status=%s target_status=%s reason=%s",
+		result.OrderID,
+		model.OrderStatusPendingStock,
+		status,
+		"stock_result_applied",
+	)
 	return nil
 }
 

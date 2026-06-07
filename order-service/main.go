@@ -5,12 +5,15 @@ import (
 	"errors"
 	"log"
 	"net"
+	"net/http"
+	"time"
 
 	pb "micro-proto"
 	"order-service/internal/mq"
 	"order-service/internal/repository"
 	"order-service/internal/service"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -57,6 +60,8 @@ func (h *grpcOrderHandler) GetOrder(ctx context.Context, req *pb.GetOrderRequest
 		ProductId:     order.ProductID,
 		Status:        order.Status,
 		StatusMessage: order.Message,
+		CreatedAt:     order.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:     order.UpdatedAt.Format(time.RFC3339),
 	}, nil
 }
 
@@ -65,6 +70,7 @@ func main() {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("read config failed: %v", err)
 	}
+	startMetricsServer("order-service", viper.GetString("order_service.metrics_port"), ":9103")
 
 	db, err := gorm.Open(mysql.Open(viper.GetString("mysql_dsn")), &gorm.Config{})
 	if err != nil {
@@ -109,4 +115,20 @@ func main() {
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("serve failed: %v", err)
 	}
+}
+
+func startMetricsServer(serviceName string, configuredAddr string, defaultAddr string) {
+	addr := configuredAddr
+	if addr == "" {
+		addr = defaultAddr
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	go func() {
+		log.Printf("%s metrics started on %s", serviceName, addr)
+		if err := http.ListenAndServe(addr, mux); err != nil {
+			log.Printf("%s metrics server failed: %v", serviceName, err)
+		}
+	}()
 }

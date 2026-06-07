@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"net/http"
 
 	pb "micro-proto"
 	productgrpc "product-service/internal/grpc"
@@ -12,6 +13,7 @@ import (
 	"product-service/internal/repository"
 	"product-service/internal/service"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
@@ -25,6 +27,7 @@ func main() {
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("read config failed: %v", err)
 	}
+	startMetricsServer("product-service", viper.GetString("product_service.metrics_port"), ":9102")
 
 	ctx := context.Background()
 	productRepo := initProductRepository(ctx)
@@ -35,7 +38,7 @@ func main() {
 
 	stockProcessor := service.NewStockProcessor(
 		productRepo,
-		service.NewRedisStockCache(rdb),
+		rdb,
 		productmq.NewStockResultPublisher(mqChannel),
 	)
 	if err := productmq.StartStockConsumer(mqChannel, stockProcessor); err != nil {
@@ -56,6 +59,22 @@ func main() {
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("serve failed: %v", err)
 	}
+}
+
+func startMetricsServer(serviceName string, configuredAddr string, defaultAddr string) {
+	addr := configuredAddr
+	if addr == "" {
+		addr = defaultAddr
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	go func() {
+		log.Printf("%s metrics started on %s", serviceName, addr)
+		if err := http.ListenAndServe(addr, mux); err != nil {
+			log.Printf("%s metrics server failed: %v", serviceName, err)
+		}
+	}()
 }
 
 func initProductRepository(ctx context.Context) *repository.ProductRepository {

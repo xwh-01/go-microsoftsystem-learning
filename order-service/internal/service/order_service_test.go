@@ -10,9 +10,10 @@ import (
 )
 
 type stubOrderRepository struct {
-	createFn       func(ctx context.Context, order *model.Order) error
-	findByOrderID  func(ctx context.Context, orderID string) (*model.Order, error)
-	updateStatusFn func(ctx context.Context, orderID string, status string, message string) error
+	createFn           func(ctx context.Context, order *model.Order) error
+	findByOrderID      func(ctx context.Context, orderID string) (*model.Order, error)
+	updateStatusFn     func(ctx context.Context, orderID string, status string, message string) error
+	updateStatusFromFn func(ctx context.Context, orderID string, expectedStatus string, targetStatus string, message string) (bool, error)
 }
 
 func (s *stubOrderRepository) Create(ctx context.Context, order *model.Order) error {
@@ -25,6 +26,10 @@ func (s *stubOrderRepository) FindByOrderID(ctx context.Context, orderID string)
 
 func (s *stubOrderRepository) UpdateStatus(ctx context.Context, orderID string, status string, message string) error {
 	return s.updateStatusFn(ctx, orderID, status, message)
+}
+
+func (s *stubOrderRepository) UpdateStatusFrom(ctx context.Context, orderID string, expectedStatus string, targetStatus string, message string) (bool, error) {
+	return s.updateStatusFromFn(ctx, orderID, expectedStatus, targetStatus, message)
 }
 
 type stubStockPublisher struct {
@@ -75,12 +80,15 @@ func TestCreateOrderInitialStatus(t *testing.T) {
 func TestApplyStockResultSuccess(t *testing.T) {
 	var updatedStatus string
 	var updatedMessage string
+	var expectedStatus string
 	repo := &stubOrderRepository{
-		createFn: func(ctx context.Context, order *model.Order) error { return nil },
-		updateStatusFn: func(ctx context.Context, orderID string, status string, message string) error {
-			updatedStatus = status
+		createFn:       func(ctx context.Context, order *model.Order) error { return nil },
+		updateStatusFn: func(ctx context.Context, orderID string, status string, message string) error { return nil },
+		updateStatusFromFn: func(ctx context.Context, orderID string, expected string, target string, message string) (bool, error) {
+			expectedStatus = expected
+			updatedStatus = target
 			updatedMessage = message
-			return nil
+			return true, nil
 		},
 	}
 
@@ -92,6 +100,9 @@ func TestApplyStockResultSuccess(t *testing.T) {
 	if updatedStatus != model.OrderStatusConfirmed {
 		t.Fatalf("expected status %s, got %s", model.OrderStatusConfirmed, updatedStatus)
 	}
+	if expectedStatus != model.OrderStatusPendingStock {
+		t.Fatalf("expected source status %s, got %s", model.OrderStatusPendingStock, expectedStatus)
+	}
 	if updatedMessage != model.OrderMessageConfirmed {
 		t.Fatalf("expected message %q, got %q", model.OrderMessageConfirmed, updatedMessage)
 	}
@@ -101,11 +112,12 @@ func TestApplyStockResultFailure(t *testing.T) {
 	var updatedStatus string
 	var updatedMessage string
 	repo := &stubOrderRepository{
-		createFn: func(ctx context.Context, order *model.Order) error { return nil },
-		updateStatusFn: func(ctx context.Context, orderID string, status string, message string) error {
-			updatedStatus = status
+		createFn:       func(ctx context.Context, order *model.Order) error { return nil },
+		updateStatusFn: func(ctx context.Context, orderID string, status string, message string) error { return nil },
+		updateStatusFromFn: func(ctx context.Context, orderID string, expected string, target string, message string) (bool, error) {
+			updatedStatus = target
 			updatedMessage = message
-			return nil
+			return true, nil
 		},
 	}
 
@@ -122,6 +134,28 @@ func TestApplyStockResultFailure(t *testing.T) {
 	}
 }
 
+func TestApplyStockResultSkipNonPendingOrder(t *testing.T) {
+	repo := &stubOrderRepository{
+		createFn:       func(ctx context.Context, order *model.Order) error { return nil },
+		updateStatusFn: func(ctx context.Context, orderID string, status string, message string) error { return nil },
+		updateStatusFromFn: func(ctx context.Context, orderID string, expected string, target string, message string) (bool, error) {
+			if expected != model.OrderStatusPendingStock {
+				t.Fatalf("expected source status %s, got %s", model.OrderStatusPendingStock, expected)
+			}
+			if target != model.OrderStatusFailed {
+				t.Fatalf("expected target status %s, got %s", model.OrderStatusFailed, target)
+			}
+			return false, nil
+		},
+	}
+
+	svc := NewOrderService(repo, &stubStockPublisher{})
+	err := svc.ApplyStockResult(context.Background(), StockResult{OrderID: "ORD-1", Success: false, Reason: "late failure"})
+	if err != nil {
+		t.Fatalf("ApplyStockResult should ignore non-pending transition, got error: %v", err)
+	}
+}
+
 func TestGetOrderNotFound(t *testing.T) {
 	repo := &stubOrderRepository{
 		createFn: func(ctx context.Context, order *model.Order) error { return nil },
@@ -129,6 +163,9 @@ func TestGetOrderNotFound(t *testing.T) {
 			return nil, repository.ErrOrderNotFound
 		},
 		updateStatusFn: func(ctx context.Context, orderID string, status string, message string) error { return nil },
+		updateStatusFromFn: func(ctx context.Context, orderID string, expectedStatus string, targetStatus string, message string) (bool, error) {
+			return true, nil
+		},
 	}
 
 	svc := NewOrderService(repo, &stubStockPublisher{})

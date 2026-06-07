@@ -133,6 +133,142 @@ func (x *GetProductResponse) GetStock() int32 {
 	return 0
 }
 
+type GetStockDeductionLogRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStockDeductionLogRequest) Reset() {
+	*x = GetStockDeductionLogRequest{}
+	mi := &file_product_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStockDeductionLogRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStockDeductionLogRequest) ProtoMessage() {}
+
+func (x *GetStockDeductionLogRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_product_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStockDeductionLogRequest.ProtoReflect.Descriptor instead.
+func (*GetStockDeductionLogRequest) Descriptor() ([]byte, []int) {
+	return file_product_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetStockDeductionLogRequest) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+type GetStockDeductionLogResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	OrderId       string                 `protobuf:"bytes,3,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	ProductId     int32                  `protobuf:"varint,4,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	Quantity      int32                  `protobuf:"varint,5,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	Reason        string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStockDeductionLogResponse) Reset() {
+	*x = GetStockDeductionLogResponse{}
+	mi := &file_product_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStockDeductionLogResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStockDeductionLogResponse) ProtoMessage() {}
+
+func (x *GetStockDeductionLogResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_product_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStockDeductionLogResponse.ProtoReflect.Descriptor instead.
+func (*GetStockDeductionLogResponse) Descriptor() ([]byte, []int) {
+	return file_product_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetStockDeductionLogResponse) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *GetStockDeductionLogResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *GetStockDeductionLogResponse) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+func (x *GetStockDeductionLogResponse) GetProductId() int32 {
+	if x != nil {
+		return x.ProductId
+	}
+	return 0
+}
+
+func (x *GetStockDeductionLogResponse) GetQuantity() int32 {
+	if x != nil {
+		return x.Quantity
+	}
+	return 0
+}
+
+func (x *GetStockDeductionLogResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetStockDeductionLogResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 var File_product_proto protoreflect.FileDescriptor
 
 const file_product_proto_rawDesc = "" +
@@ -145,10 +281,22 @@ const file_product_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
 	"\x05price\x18\x03 \x01(\x02R\x05price\x12\x14\n" +
-	"\x05stock\x18\x04 \x01(\x05R\x05stock2G\n" +
+	"\x05stock\x18\x04 \x01(\x05R\x05stock\"8\n" +
+	"\x1bGetStockDeductionLogRequest\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\"\xd2\x01\n" +
+	"\x1cGetStockDeductionLogResponse\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x19\n" +
+	"\border_id\x18\x03 \x01(\tR\aorderId\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x04 \x01(\x05R\tproductId\x12\x1a\n" +
+	"\bquantity\x18\x05 \x01(\x05R\bquantity\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x12\x16\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason2\x9c\x01\n" +
 	"\x0eProductService\x125\n" +
 	"\n" +
-	"GetProduct\x12\x12.GetProductRequest\x1a\x13.GetProductResponseB\aZ\x05./;pbb\x06proto3"
+	"GetProduct\x12\x12.GetProductRequest\x1a\x13.GetProductResponse\x12S\n" +
+	"\x14GetStockDeductionLog\x12\x1c.GetStockDeductionLogRequest\x1a\x1d.GetStockDeductionLogResponseB\aZ\x05./;pbb\x06proto3"
 
 var (
 	file_product_proto_rawDescOnce sync.Once
@@ -162,16 +310,20 @@ func file_product_proto_rawDescGZIP() []byte {
 	return file_product_proto_rawDescData
 }
 
-var file_product_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_product_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_product_proto_goTypes = []any{
-	(*GetProductRequest)(nil),  // 0: GetProductRequest
-	(*GetProductResponse)(nil), // 1: GetProductResponse
+	(*GetProductRequest)(nil),            // 0: GetProductRequest
+	(*GetProductResponse)(nil),           // 1: GetProductResponse
+	(*GetStockDeductionLogRequest)(nil),  // 2: GetStockDeductionLogRequest
+	(*GetStockDeductionLogResponse)(nil), // 3: GetStockDeductionLogResponse
 }
 var file_product_proto_depIdxs = []int32{
 	0, // 0: ProductService.GetProduct:input_type -> GetProductRequest
-	1, // 1: ProductService.GetProduct:output_type -> GetProductResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: ProductService.GetStockDeductionLog:input_type -> GetStockDeductionLogRequest
+	1, // 2: ProductService.GetProduct:output_type -> GetProductResponse
+	3, // 3: ProductService.GetStockDeductionLog:output_type -> GetStockDeductionLogResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -188,7 +340,7 @@ func file_product_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_product_proto_rawDesc), len(file_product_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

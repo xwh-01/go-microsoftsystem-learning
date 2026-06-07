@@ -186,6 +186,8 @@ type GetOrderResponse struct {
 	ProductId     int32                  `protobuf:"varint,5,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
 	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
 	StatusMessage string                 `protobuf:"bytes,7,opt,name=status_message,json=statusMessage,proto3" json:"status_message,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     string                 `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -269,6 +271,20 @@ func (x *GetOrderResponse) GetStatusMessage() string {
 	return ""
 }
 
+func (x *GetOrderResponse) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *GetOrderResponse) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
 var File_order_proto protoreflect.FileDescriptor
 
 const file_order_proto_rawDesc = "" +
@@ -283,7 +299,7 @@ const file_order_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x19\n" +
 	"\border_id\x18\x03 \x01(\tR\aorderId\",\n" +
 	"\x0fGetOrderRequest\x12\x19\n" +
-	"\border_id\x18\x01 \x01(\tR\aorderId\"\xd2\x01\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\"\x90\x02\n" +
 	"\x10GetOrderResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\x05R\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x19\n" +
@@ -292,7 +308,11 @@ const file_order_proto_rawDesc = "" +
 	"\n" +
 	"product_id\x18\x05 \x01(\x05R\tproductId\x12\x16\n" +
 	"\x06status\x18\x06 \x01(\tR\x06status\x12%\n" +
-	"\x0estatus_message\x18\a \x01(\tR\rstatusMessage2y\n" +
+	"\x0estatus_message\x18\a \x01(\tR\rstatusMessage\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\b \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\t \x01(\tR\tupdatedAt2y\n" +
 	"\fOrderService\x128\n" +
 	"\vCreateOrder\x12\x13.CreateOrderRequest\x1a\x14.CreateOrderResponse\x12/\n" +
 	"\bGetOrder\x12\x10.GetOrderRequest\x1a\x11.GetOrderResponseB\aZ\x05./;pbb\x06proto3"

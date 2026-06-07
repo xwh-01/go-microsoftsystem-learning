@@ -32,4 +32,6 @@ message GetOrderResponse {
   int32 product_id = 5;
   string status = 6;
   string status_message = 7;
+  string created_at = 8;
+  string updated_at = 9;
 }

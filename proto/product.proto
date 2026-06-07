@@ -4,6 +4,7 @@ option go_package = "./;pb";
 
 service ProductService {
   rpc GetProduct (GetProductRequest) returns (GetProductResponse);
+  rpc GetStockDeductionLog (GetStockDeductionLogRequest) returns (GetStockDeductionLogResponse);
 }
 
 message GetProductRequest {
@@ -15,4 +16,18 @@ message GetProductResponse {
   string name = 2;
   float price = 3;
   int32 stock = 4;
+}
+
+message GetStockDeductionLogRequest {
+  string order_id = 1;
+}
+
+message GetStockDeductionLogResponse {
+  int32 code = 1;
+  string message = 2;
+  string order_id = 3;
+  int32 product_id = 4;
+  int32 quantity = 5;
+  string status = 6;
+  string reason = 7;
 }
