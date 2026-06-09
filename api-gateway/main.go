@@ -13,7 +13,7 @@ import (
 )
 
 func dialGRPC(target string) (*grpc.ClientConn, error) {
-	return grpc.Dial(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	return grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 }
 
 func main() {
