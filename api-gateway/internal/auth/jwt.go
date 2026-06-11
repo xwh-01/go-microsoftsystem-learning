@@ -9,19 +9,23 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Claims 自定义 JWT 声明，嵌入用户ID
 type Claims struct {
 	UserID int32 `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
+// JWTManager 管理 JWT 令牌的生成与验证
 type JWTManager struct {
 	secret []byte
 }
 
+// NewJWTManager 创建 JWT 管理器，secret 为签名密钥
 func NewJWTManager(secret string) *JWTManager {
 	return &JWTManager{secret: []byte(secret)}
 }
 
+// GenerateToken 为用户生成 HS256 签名的 JWT 令牌，有效期 24 小时
 func (m *JWTManager) GenerateToken(userID int32) (string, error) {
 	claims := Claims{
 		UserID: userID,
@@ -34,6 +38,7 @@ func (m *JWTManager) GenerateToken(userID int32) (string, error) {
 	return token.SignedString(m.secret)
 }
 
+// Middleware 返回 Gin 中间件：验证 Authorization 头中的 Bearer 令牌，解析并注入 userID 到上下文
 func (m *JWTManager) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")

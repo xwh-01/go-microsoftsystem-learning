@@ -21,11 +21,13 @@ import (
 	"gorm.io/gorm"
 )
 
+// grpcOrderHandler 实现 proto 定义的 OrderServiceServer 接口
 type grpcOrderHandler struct {
 	pb.UnimplementedOrderServiceServer
 	orderService *service.OrderService
 }
 
+// CreateOrder 处理下单请求
 func (h *grpcOrderHandler) CreateOrder(ctx context.Context, req *pb.CreateOrderRequest) (*pb.CreateOrderResponse, error) {
 	log.Printf("create order request: user_id=%d product_id=%d", req.UserId, req.ProductId)
 
@@ -42,6 +44,7 @@ func (h *grpcOrderHandler) CreateOrder(ctx context.Context, req *pb.CreateOrderR
 	}, nil
 }
 
+// GetOrder 查询订单详情
 func (h *grpcOrderHandler) GetOrder(ctx context.Context, req *pb.GetOrderRequest) (*pb.GetOrderResponse, error) {
 	order, err := h.orderService.GetOrder(ctx, req.OrderId)
 	if err != nil {
@@ -65,6 +68,8 @@ func (h *grpcOrderHandler) GetOrder(ctx context.Context, req *pb.GetOrderRequest
 	}, nil
 }
 
+// order-service 订单服务主入口
+// 职责：创建订单、发布库存扣减消息、消费扣减结果并更新订单状态
 func main() {
 	viper.SetConfigFile("../config/config.yaml")
 	if err := viper.ReadInConfig(); err != nil {
@@ -117,6 +122,7 @@ func main() {
 	}
 }
 
+// startMetricsServer 启动 Prometheus metrics HTTP 服务器
 func startMetricsServer(serviceName string, configuredAddr string, defaultAddr string) {
 	addr := configuredAddr
 	if addr == "" {

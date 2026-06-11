@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+// 库存扣减日志状态常量
 const (
 	StockDeductionStatusProcessing = "processing"
 	StockDeductionStatusSuccess    = "success"
@@ -9,6 +10,7 @@ const (
 	StockDeductionStatusSkipped    = "skipped"
 )
 
+// StockDeductionLog 库存扣减日志表，order_id 唯一索引保障幂等
 type StockDeductionLog struct {
 	ID        uint      `gorm:"primaryKey"`
 	OrderID   string    `gorm:"column:order_id;type:varchar(64);uniqueIndex;not null"`

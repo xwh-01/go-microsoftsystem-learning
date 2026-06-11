@@ -2,7 +2,9 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
+// Prometheus 指标定义
 var (
+	// OrdersCreatedTotal 创建的订单总数
 	OrdersCreatedTotal = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "orders_created_total",
 		Help: "Total number of orders created in pending_stock status.",

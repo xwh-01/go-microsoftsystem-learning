@@ -12,6 +12,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// StartStockResultConsumer 启动库存扣减结果消费者，监听 stock_result_queue
 func StartStockResultConsumer(ch *amqp.Channel, orderService *service.OrderService) error {
 	msgs, err := ch.Consume(StockResultQueue, "", false, false, false, false, nil)
 	if err != nil {

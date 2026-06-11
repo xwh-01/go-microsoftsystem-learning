@@ -2,6 +2,7 @@ package model
 
 import "gorm.io/gorm"
 
+// Product 商品表模型
 type Product struct {
 	gorm.Model
 	Name    string  `gorm:"type:varchar(100);not null"`

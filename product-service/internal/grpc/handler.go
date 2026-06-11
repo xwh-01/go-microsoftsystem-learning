@@ -11,15 +11,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Handler 实现 proto 定义的 ProductServiceServer 接口
 type Handler struct {
 	pb.UnimplementedProductServiceServer
 	productService *service.ProductService
 }
 
+// NewHandler 创建 gRPC Handler
 func NewHandler(productService *service.ProductService) *Handler {
 	return &Handler{productService: productService}
 }
 
+// GetProduct 查询商品信息，商品不存在时返回 gRPC NotFound 状态码
 func (h *Handler) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.GetProductResponse, error) {
 	product, err := h.productService.GetProduct(ctx, req.ProductId)
 	if err != nil {
@@ -31,6 +34,7 @@ func (h *Handler) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*p
 	return product, nil
 }
 
+// GetStockDeductionLog 查询订单的库存扣减日志
 func (h *Handler) GetStockDeductionLog(ctx context.Context, req *pb.GetStockDeductionLogRequest) (*pb.GetStockDeductionLogResponse, error) {
 	logEntry, err := h.productService.GetStockDeductionLog(ctx, req.OrderId)
 	if err != nil {

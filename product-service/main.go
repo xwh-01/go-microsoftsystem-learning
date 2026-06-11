@@ -22,6 +22,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// product-service 商品服务主入口
+// 职责：商品查询（Redis 缓存）、异步库存扣减（RabbitMQ 消费）、gRPC 服务
 func main() {
 	viper.SetConfigFile("../config/config.yaml")
 	if err := viper.ReadInConfig(); err != nil {
@@ -61,6 +63,7 @@ func main() {
 	}
 }
 
+// startMetricsServer 启动 Prometheus metrics HTTP 服务器
 func startMetricsServer(serviceName string, configuredAddr string, defaultAddr string) {
 	addr := configuredAddr
 	if addr == "" {
@@ -77,6 +80,7 @@ func startMetricsServer(serviceName string, configuredAddr string, defaultAddr s
 	}()
 }
 
+// initProductRepository 初始化 MySQL 连接、自动迁移、插入种子数据
 func initProductRepository(ctx context.Context) *repository.ProductRepository {
 	db, err := gorm.Open(mysql.Open(viper.GetString("mysql_dsn")), &gorm.Config{})
 	if err != nil {
@@ -91,6 +95,7 @@ func initProductRepository(ctx context.Context) *repository.ProductRepository {
 	return productRepo
 }
 
+// seedProduct 首次启动时插入一条种子商品数据
 func seedProduct(ctx context.Context, repo *repository.ProductRepository) {
 	count, err := repo.Count(ctx)
 	if err != nil {
@@ -107,6 +112,7 @@ func seedProduct(ctx context.Context, repo *repository.ProductRepository) {
 	log.Println("seed product created")
 }
 
+// initRedis 初始化 Redis 连接
 func initRedis() *redis.Client {
 	rdb := redis.NewClient(&redis.Options{Addr: viper.GetString("common.redis_addr")})
 	if _, err := rdb.Ping(context.Background()).Result(); err != nil {
@@ -115,6 +121,7 @@ func initRedis() *redis.Client {
 	return rdb
 }
 
+// initRabbitMQ 初始化 RabbitMQ 连接和 Channel，并声明消息队列
 func initRabbitMQ() (*amqp.Connection, *amqp.Channel) {
 	conn, err := amqp.Dial(viper.GetString("common.rabbitmq_addr"))
 	if err != nil {

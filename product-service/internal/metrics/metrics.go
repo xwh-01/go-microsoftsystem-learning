@@ -2,7 +2,9 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
+// Prometheus 指标定义
 var (
+	// StockDeductAttemptTotal 库存扣减尝试总数
 	StockDeductAttemptTotal = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "stock_deduct_attempt_total",
 		Help: "Total number of stock deduction processing attempts.",
@@ -33,6 +35,7 @@ var (
 		Help: "Total number of RabbitMQ messages published to retry queues.",
 	}, []string{"queue"})
 
+	// MQDeadTotal 进入死信队列的消息数
 	MQDeadTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "mq_dead_total",
 		Help: "Total number of RabbitMQ messages published to dead queues.",

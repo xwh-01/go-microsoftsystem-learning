@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// dialGRPC 创建一个 gRPC 客户端连接，target 为服务端地址（如 "127.0.0.1:50051"）
 func dialGRPC(target string) (*grpc.ClientConn, error) {
 	return grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 }

@@ -11,6 +11,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// StartStockConsumer 启动库存扣减消息消费者，同时监听主队列和重试队列
 func StartStockConsumer(ch *amqp.Channel, processor *service.StockProcessor) error {
 	if err := startStockConsumerForQueue(ch, processor, StockQueue); err != nil {
 		return err
@@ -23,6 +24,7 @@ func StartStockConsumer(ch *amqp.Channel, processor *service.StockProcessor) err
 	return nil
 }
 
+// startStockConsumerForQueue 为指定队列启动独立 goroutine 消费消息
 func startStockConsumerForQueue(ch *amqp.Channel, processor *service.StockProcessor, queue string) error {
 	msgs, err := ch.Consume(queue, "", false, false, false, false, nil)
 	if err != nil {
@@ -76,6 +78,7 @@ func startStockConsumerForQueue(ch *amqp.Channel, processor *service.StockProces
 	return nil
 }
 
+// publishRetryOrDead 根据重试次数路由到重试队列或死信队列
 func publishRetryOrDead(ctx context.Context, ch *amqp.Channel, processor *service.StockProcessor, msg StockDeductionMessage, err error) error {
 	msg.Error = err.Error()
 	if msg.RetryCount < MaxStockDeductRetries {
@@ -126,6 +129,7 @@ func publishRetryOrDead(ctx context.Context, ch *amqp.Channel, processor *servic
 	return nil
 }
 
+// publishStockDeductionMessage 将库存扣减消息序列化后发布到指定队列
 func publishStockDeductionMessage(ctx context.Context, ch *amqp.Channel, queue string, msg StockDeductionMessage) error {
 	body, err := json.Marshal(msg)
 	if err != nil {

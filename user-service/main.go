@@ -15,6 +15,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// user-service 用户服务主入口
+// 负责用户注册与登录，对外通过 gRPC 暴露 UserService
 func main() {
 	viper.SetConfigFile("../config/config.yaml")
 	if err := viper.ReadInConfig(); err != nil {

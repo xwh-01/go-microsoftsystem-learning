@@ -9,15 +9,18 @@ import (
 	"user-service/internal/service"
 )
 
+// Handler 实现 proto 定义的 UserServiceServer 接口
 type Handler struct {
 	pb.UnimplementedUserServiceServer
 	userService *service.UserService
 }
 
+// NewHandler 创建 gRPC Handler
 func NewHandler(userService *service.UserService) *Handler {
 	return &Handler{userService: userService}
 }
 
+// Register 处理用户注册请求
 func (h *Handler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	log.Printf("register request: username=%s", req.Username)
 
@@ -37,6 +40,7 @@ func (h *Handler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Re
 	}, nil
 }
 
+// Login 处理用户登录请求，根据错误类型返回不同状态码
 func (h *Handler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	log.Printf("login request: username=%s", req.Username)
 

@@ -14,21 +14,26 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// LoginRequest 登录/注册请求体
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
+// CreateOrderRequest 下单请求体
 type CreateOrderRequest struct {
 	ProductID int32 `json:"product_id" binding:"required,gt=0"`
 }
 
+// Clients 封装三个后端 gRPC 服务的客户端
 type Clients struct {
 	User    pb.UserServiceClient
 	Product pb.ProductServiceClient
 	Order   pb.OrderServiceClient
 }
 
+// NewRouter 创建并配置 Gin 路由引擎，注册所有 HTTP 路由
+// 路由分为两组：/api/v1/public（无需认证）和 /api/v1/auth（需要 JWT 认证）
 func NewRouter(clients Clients, authMiddleware gin.HandlerFunc, generateToken func(int32) (string, error)) *gin.Engine {
 	r := gin.Default()
 	v1 := r.Group("/api/v1")

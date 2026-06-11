@@ -15,6 +15,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// productRepository 商品仓储接口，解耦具体数据库实现
 type productRepository interface {
 	Create(ctx context.Context, product *model.Product) error
 	FindByID(ctx context.Context, productID int32) (*model.Product, error)
@@ -22,11 +23,13 @@ type productRepository interface {
 	FindStockDeductionLog(ctx context.Context, orderID string) (*model.StockDeductionLog, error)
 }
 
+// ProductService 商品查询服务，集成 Redis 缓存层
 type ProductService struct {
 	repo productRepository
 	rdb  *redis.Client
 }
 
+// NewProductService 创建商品服务实例
 func NewProductService(repo productRepository, rdb *redis.Client) *ProductService {
 	return &ProductService{
 		repo: repo,
@@ -34,6 +37,7 @@ func NewProductService(repo productRepository, rdb *redis.Client) *ProductServic
 	}
 }
 
+// GetProduct 获取商品信息，优先读 Redis 缓存（支持空对象缓存防穿透）
 func (s *ProductService) GetProduct(ctx context.Context, productID int32) (*pb.GetProductResponse, error) {
 	cacheKey := stock.ProductCacheKey(productID)
 	cached, ok, notFound := s.readProductCache(ctx, cacheKey)
@@ -65,6 +69,7 @@ func (s *ProductService) GetProduct(ctx context.Context, productID int32) (*pb.G
 	return res, nil
 }
 
+// GetStockDeductionLog 查询指定订单的库存扣减日志
 func (s *ProductService) GetStockDeductionLog(ctx context.Context, orderID string) (*model.StockDeductionLog, error) {
 	logEntry, err := s.repo.FindStockDeductionLog(ctx, orderID)
 	if err != nil {
@@ -76,6 +81,7 @@ func (s *ProductService) GetStockDeductionLog(ctx context.Context, orderID strin
 	return logEntry, nil
 }
 
+// readProductCache 从 Redis 读取商品缓存，返回(商品数据, 是否命中, 是否空对象标记)
 func (s *ProductService) readProductCache(ctx context.Context, cacheKey string) (*pb.GetProductResponse, bool, bool) {
 	val, err := s.rdb.Get(ctx, cacheKey).Result()
 	if err == redis.Nil {
@@ -97,6 +103,7 @@ func (s *ProductService) readProductCache(ctx context.Context, cacheKey string) 
 	return &product, true, false
 }
 
+// writeProductCache 将商品信息序列化后写入 Redis 缓存
 func (s *ProductService) writeProductCache(ctx context.Context, cacheKey string, product *pb.GetProductResponse) {
 	jsonBytes, err := json.Marshal(product)
 	if err != nil {
